@@ -11,7 +11,7 @@ build-and-test-job:
     - macos
   image: eclipse-temurin:21-jdk-jammy
   script:
-    - echo "пакуем проект"
+    - echo "пакуем проект..."
     - mvn package
   artifacts:
     paths:
