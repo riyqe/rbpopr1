@@ -1,0 +1,27 @@
+name: Java CI Build on Pull Request
+
+on:
+  pull_request:
+    branches: [ "main3" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: maven:3.9-eclipse-temurin-21
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Set permissions for Maven Wrapper
+        if: ${{ exists('./mvnw') }}
+        run: chmod +x ./mvnw
+
+      - name: Build with Maven
+        run: mvn -B package
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-application
+          path: target/*.jar
