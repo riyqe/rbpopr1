@@ -8,8 +8,8 @@ stages:
 build-and-test-job:
   stage: build
   tags:
-    - saas-linux-small-amd64
-  image: eclipse-temurin:21-jdk
+    - macos
+  image: eclipse-temurin:21-jdk-jammy
   script:
     - echo "packaging the project..."
     - mvn package
