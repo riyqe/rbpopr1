@@ -1,3 +1,5 @@
+# .github/workflows/java-build.yml
+
 name: Java CI Build on Pull Request
 
 on:
@@ -13,12 +15,16 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v4
 
-      - name: Set permissions for Maven Wrapper
-        if: ${{ exists('./mvnw') }}
-        run: chmod +x ./mvnw
-
       - name: Build with Maven
-        run: mvn -B package
+        run: |
+          if [ -f ./mvnw ]; then
+            echo "Maven Wrapper found. Using ./mvnw"
+            chmod +x ./mvnw
+            ./mvnw -B package
+          else
+            echo "Maven Wrapper not found. Using mvn from container"
+            mvn -B package
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
