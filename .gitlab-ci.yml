@@ -9,7 +9,7 @@ build-and-test-job:
   stage: build
   tags:
     - macos
-  image: eclipse-temurin:21-jdk-jammy
+  image: maven:3.9-eclipse-temurin-21
   script:
     - echo "пакуем наш проект..."
     - mvn package
