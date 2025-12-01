@@ -102,6 +102,8 @@
                 <configuration>
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
+                    <autoUpdate>false</autoUpdate>
+                    <ossindexAnalyzerEnabled>true</ossindexAnalyzerEnabled>
                 </configuration>
                 <executions>
                     <execution>
@@ -111,6 +113,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 
