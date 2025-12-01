@@ -25,13 +25,10 @@ semgrep-sast:
   tags:
     - macos
   image: returntocorp/semgrep
-
   variables:
     GIT_STRATEGY: clone
-
   script:
     - semgrep scan --config=auto --gitlab-sast --output=gl-sast-report.json .
-
   artifacts:
     reports:
       sast: gl-sast-report.json
@@ -41,15 +38,11 @@ semgrep-sast:
 
 dependency-check:
   stage: test
-
   tags:
     - macos
-
   image: maven:3.9-eclipse-temurin-21
-
   script:
-    - mvn dependency-check:check -DfailBuildOnCVSS=11
-
+    - mvn dependency-check:check -nsu
   artifacts:
     paths:
       - target/dependency-check-report.html
