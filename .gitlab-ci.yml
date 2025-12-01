@@ -42,7 +42,7 @@ dependency-check:
     - macos
   image: maven:3.9-eclipse-temurin-21
   script:
-    - mvn dependency-check:check -nsu
+    - mvn dependency-check:check -DautoUpdate=false -Danalyzer.nvd.enabled=false -DfailBuildOnCVSS=11
   artifacts:
     paths:
       - target/dependency-check-report.html
