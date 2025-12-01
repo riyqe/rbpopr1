@@ -101,11 +101,6 @@
                 <configuration>
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
-                    <failOnError>false</failOnError>
-                    <autoUpdate>false</autoUpdate>
-                    <nvd>
-                        <enabled>false</enabled>
-                    </nvd>
                 </configuration>
                 <executions>
                     <execution>
@@ -115,8 +110,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-
         </plugins>
     </build>
 

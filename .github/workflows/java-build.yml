@@ -57,12 +57,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run OWASP Dependency Check
-        run: |
-          mvn dependency-check:check -B || true
-          mkdir -p target
-          if [ ! -f target/dependency-check-report.html ]; then
-            echo "<html><body><h1>Report not generated due to NVD connection error.</h1></body></html>" > target/dependency-check-report.html
-          fi
+        run: mvn dependency-check:check -DfailBuildOnCVSS=11 -B
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
