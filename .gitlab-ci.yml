@@ -42,7 +42,7 @@ dependency-check:
     - macos
   image: maven:3.9-eclipse-temurin-21
   script:
-    - mvn dependency-check:check -DfailBuildOnCVSS=11
+    - mvn dependency-check:check -DfailBuildOnCVSS=11 -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3 -Dmaven.wagon.http.ssl.insecure=true
   artifacts:
     paths:
       - target/dependency-check-report.html
