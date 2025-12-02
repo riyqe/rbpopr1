@@ -101,14 +101,11 @@
                 <configuration>
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
+                    <nvdApiKey>3A689B7E-A1CF-F011-8364-129478FCB64D</nvdApiKey>
                     <autoUpdate>false</autoUpdate>
-                    <nvdAnalyzerEnabled>false</nvdAnalyzerEnabled>
-                    <nvd>
-                        <enabled>false</enabled>
-                    </nvd>
-                    <ossindexAnalyzerEnabled>true</ossindexAnalyzerEnabled>
-                    <failOnError>false</failOnError>
+                    <nvdAnalyzerEnabled>true</nvdAnalyzerEnabled>
                 </configuration>
+
                 <executions>
                     <execution>
                         <goals>
