@@ -102,7 +102,6 @@
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     <nvdApiKey>3A689B7E-A1CF-F011-8364-129478FCB64D</nvdApiKey>
-                    <autoUpdate>false</autoUpdate>
                     <nvdAnalyzerEnabled>true</nvdAnalyzerEnabled>
                 </configuration>
 
