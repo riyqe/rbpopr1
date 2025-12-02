@@ -102,9 +102,7 @@
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     <autoUpdate>false</autoUpdate>
-                    <nvd>
-                        <enabled>false</enabled>
-                    </nvd>
+                    <nvdAnalyzerEnabled>false</nvdAnalyzerEnabled>
                     <ossindexAnalyzerEnabled>true</ossindexAnalyzerEnabled>
                 </configuration>
                 <executions>
