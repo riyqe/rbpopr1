@@ -101,6 +101,11 @@
                 <configuration>
                     <format>HTML</format>
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
+                    <autoUpdate>false</autoUpdate>
+                    <nvd>
+                        <enabled>false</enabled>
+                    </nvd>
+                    <ossindexAnalyzerEnabled>true</ossindexAnalyzerEnabled>
                 </configuration>
                 <executions>
                     <execution>
