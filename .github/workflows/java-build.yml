@@ -63,7 +63,7 @@ jobs:
           cache: 'maven'
 
       - name: Run Dependency-Check
-        run: mvn dependency-check:check
+        run: mvn dependency-check:check -X
 
       - name: Upload SCA Report
         uses: actions/upload-artifact@v4

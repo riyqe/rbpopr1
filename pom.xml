@@ -103,10 +103,13 @@
                         <format>HTML</format>
                     </formats>
                     <suppressionFiles>
+                        <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     </suppressionFiles>
                     <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+                    <nvdApiDelay>16000</nvdApiDelay>
+                    <nvdApiDataflowEnabled>false</nvdApiDataflowEnabled>
+                    <nvdValidForHours>4</nvdValidForHours>
                     <failBuildOnCVSS>0</failBuildOnCVSS>
-                    <nvdApiDelay>4000</nvdApiDelay>
                 </configuration>
                 <executions>
                     <execution>

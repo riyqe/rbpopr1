@@ -42,7 +42,7 @@ sca-analysis:
   variables:
     NVD_API_KEY: "$NVD_API_KEY"
   script:
-    - mvn dependency-check:check
+    - mvn dependency-check:check -X
   artifacts:
     paths:
       - target/dependency-check-report.html
