@@ -97,7 +97,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>12.1.0</version>
+                <version>11.1.0</version>
                 <configuration>
                     <formats>
                         <format>HTML</format>
@@ -106,9 +106,11 @@
                         <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     </suppressionFiles>
                     <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
-                    <nvdApiDelay>16000</nvdApiDelay>
-                    <nvdApiDataflowEnabled>false</nvdApiDataflowEnabled>
-                    <nvdValidForHours>4</nvdValidForHours>
+                    <nvdApiDelay>10000</nvdApiDelay>
+                    <nvdMaxRetryCount>10</nvdMaxRetryCount>
+                    <ossindexAnalyzerEnabled>true</ossindexAnalyzerEnabled>
+                    <connectionTimeout>60000</connectionTimeout>
+                    <readTimeout>60000</readTimeout>
                     <failBuildOnCVSS>0</failBuildOnCVSS>
                 </configuration>
                 <executions>
@@ -119,6 +121,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 </project>
