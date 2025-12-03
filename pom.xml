@@ -97,14 +97,16 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>9.0.9</version>
+                <version>9.2.0</version>
                 <configuration>
-                    <format>HTML</format>
-                    <suppressionFile>owasp-suppressions.xml</suppressionFile>
-                    <nvdApiKey>3A689B7E-A1CF-F011-8364-129478FCB64D</nvdApiKey>
-                    <nvdAnalyzerEnabled>true</nvdAnalyzerEnabled>
+                    <formats>
+                        <format>HTML</format>
+                    </formats>
+                    <suppressionFiles>
+                        <suppressionFile>suppressions.xml</suppressionFile>
+                    </suppressionFiles>
+                    <failBuildOnCVSS>0</failBuildOnCVSS>
                 </configuration>
-
                 <executions>
                     <execution>
                         <goals>
@@ -115,5 +117,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

@@ -36,14 +36,14 @@ semgrep-sast:
       - gl-sast-report.json
     expire_in: 1 week
 
-dependency-check:
+sca-analysis:
   stage: test
-  tags:
-    - macos
   image: maven:3.9-eclipse-temurin-21
   script:
-    - mvn dependency-check:check -B || true
+    - mvn dependency-check:check
   artifacts:
     paths:
       - target/dependency-check-report.html
-    expire_in: 1 week
+    when: always
+  tags:
+    - macos

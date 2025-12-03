@@ -47,20 +47,25 @@ jobs:
         if: always()
 
   # ЗАДАНИЕ 4: SCA (OWASP Dependency Check)
-  dependency-check:
-    name: SCA Analysis
+  sca:
     runs-on: ubuntu-latest
-    needs: build-and-test
-    container: maven:3.9-eclipse-temurin-21
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run OWASP Dependency Check
-        run: mvn dependency-check:check -B || true
+      - name: Set up JDK and Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Upload Report
+      - name: Run Dependency-Check
+        run: mvn dependency-check:check
+
+      - name: Upload SCA Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: dependency-check-report
           path: target/dependency-check-report.html
