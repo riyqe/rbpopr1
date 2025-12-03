@@ -5,6 +5,7 @@ workflow:
 
 stages:
   - build
+  - test
 
 build-job:
   stage: build
@@ -18,3 +19,22 @@ build-job:
     paths:
       - target/*.jar
     expire_in: 1 day
+
+semgrep-sast:
+  stage: test
+  tags:
+    - macos
+  image: returntocorp/semgrep
+
+  variables:
+    GIT_STRATEGY: clone
+
+  script:
+    - semgrep scan --config=auto --gitlab-sast --output=gl-sast-report.json .
+
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths:
+      - gl-sast-report.json
+    expire_in: 1 week
