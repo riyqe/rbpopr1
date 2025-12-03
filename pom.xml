@@ -103,9 +103,10 @@
                         <format>HTML</format>
                     </formats>
                     <suppressionFiles>
-                        <suppressionFile>suppressions.xml</suppressionFile>
                     </suppressionFiles>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                     <failBuildOnCVSS>0</failBuildOnCVSS>
+                    <nvdApiDelay>4000</nvdApiDelay>
                 </configuration>
                 <executions>
                     <execution>

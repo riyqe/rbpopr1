@@ -39,6 +39,8 @@ semgrep-sast:
 sca-analysis:
   stage: test
   image: maven:3.9-eclipse-temurin-21
+  variables:
+    NVD_API_KEY: "$NVD_API_KEY"
   script:
     - mvn dependency-check:check
   artifacts:
