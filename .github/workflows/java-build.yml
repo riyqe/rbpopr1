@@ -2,7 +2,7 @@ name: Java CI Build and SAST
 
 on:
   pull_request:
-    branches: [ "main3" ]
+    branches: ["main3"]
 
 jobs:
   build:
