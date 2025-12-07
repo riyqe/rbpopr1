@@ -15,6 +15,7 @@ build-job:
   script:
     - echo "пакуем наш проект..."
     - mvn package
+    - sleep 30
   artifacts:
     paths:
       - target/*.jar
@@ -38,3 +39,49 @@ semgrep-sast:
     paths:
       - gl-sast-report.json
     expire_in: 1 week
+
+zap-baseline-scan:
+  stage: test
+  tags:
+    - macos
+  image:
+    name: zaproxy/zap-stable:latest
+    entrypoint: [""]
+  dependencies:
+    - build-job
+  before_script:
+    - apt-get update && apt-get install -y wget
+    - wget -O app.jar "${CI_JOB_URL}/artifacts/raw/target/*.jar?job=build-job"
+  script:
+    - java -jar app.jar &
+    - sleep 30
+    - echo -e "WARN\tSkip\thttps://example.com" > rules.tsv
+    - zap-baseline.py -t http://localhost:8080 -J zap-baseline-report.json -c rules.tsv
+  artifacts:
+    paths:
+      - zap-baseline-report.json
+    expire_in: 1 week
+    when: always
+
+zap-api-scan:
+  stage: test
+  tags:
+    - macos
+  image:
+    name: zaproxy/zap-stable:latest
+    entrypoint: [""]
+  dependencies:
+    - build-job
+  before_script:
+    - apt-get update && apt-get install -y wget
+    - wget -O app.jar "${CI_JOB_URL}/artifacts/raw/target/*.jar?job=build-job"
+  script:
+    - java -jar app.jar &
+    - sleep 30
+    - echo -e "WARN\tSkip\thttps://example.com" > rules.tsv
+    - zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -J zap-api-report.json -c rules.tsv
+  artifacts:
+    paths:
+      - zap-api-report.json
+    expire_in: 1 week
+    when: always
