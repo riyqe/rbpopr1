@@ -45,14 +45,15 @@ dependency-check:
     - macos
   image: maven:3.9-eclipse-temurin-21
   cache:
-    key: dependency-check-data
+    key: dependency-check-$CI_COMMIT_REF_SLUG
     paths:
       - .dependency-check/data/
+    policy: pull-push
   variables:
     DEPENDENCY_CHECK_DATA_DIRECTORY: ".dependency-check/data"
   script:
     - mkdir -p .dependency-check/data
-    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data -Dnoupdate=false
   artifacts:
     paths:
       - target/dependency-check-report.html
@@ -70,28 +71,13 @@ zap-baseline:
   script:
     - apt-get update && apt-get install -y default-jre
     - java -jar target/*.jar &
-    - echo $! > app.pid
-    - echo "Application started, waiting..."
     - sleep 30
-    - curl -f http://localhost:8080 > /dev/null 2>&1 && echo "Application is responding" || echo "Warning: Application may not be running"
     - mkdir -p zap-reports && chmod 777 zap-reports
-    - pwd
-    - ls -la
-    - echo "Running ZAP baseline scan..."
-    - '[ -f zap-rules.tsv ] && zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I -J zap-baseline-report.json || zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I -J zap-baseline-report.json || true'
-    - echo "ZAP scan completed"
-    - find . -name "*baseline*" -type f 2>/dev/null | head -10 || true
-    - find /zap -name "*baseline*" -type f 2>/dev/null | head -10 || true
-    - '[ -f /zap/wrk/zap-baseline-report.html ] && cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html && echo "Report copied from /zap/wrk/" || ([ -f zap-baseline-report.html ] && echo "Report found in working directory" || (echo "Warning: Report file not found, creating placeholder" && echo "<html><head><title>ZAP Baseline Scan Report</title></head><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-baseline-report.html))'
-    - ls -la zap-baseline-report.html
-    - '[ -f app.pid ] && kill $(cat app.pid) 2>/dev/null || true'
-    - '[ -f app.pid ] && rm -f app.pid || true'
+    - zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+    - cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html || echo "<html><body><h1>ZAP Baseline Scan Report</h1><p>No report generated</p></body></html>" > zap-baseline-report.html
   artifacts:
-    paths: 
-      - zap-baseline-report.html
-      - zap-baseline-report.json
+    paths: [zap-baseline-report.html]
     when: always
-    expire_in: 1 week
 
 zap-api:
   stage: test
@@ -104,32 +90,13 @@ zap-api:
   script:
     - apt-get update && apt-get install -y default-jre curl python3
     - java -jar target/*.jar &
-    - echo $! > app.pid
-    - echo "Application started, waiting..."
     - sleep 30
-    - curl -f http://localhost:8080 > /dev/null 2>&1 && echo "Application is responding" || echo "Warning: Application may not be running"
     - mkdir -p zap-reports && chmod 777 zap-reports
-    - pwd
-    - ls -la
     - echo '{"openapi":"3.0.0","info":{"title":"Course Management API","version":"1.0.0"},"servers":[{"url":"http://localhost:8080"}],"paths":{"/api/courses":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/courses/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}}},"/api/courses/search":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/courses/import":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/students":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/students/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}},"delete":{"responses":{"204":{"description":"No Content"}}}},"/api/xml/parse":{"post":{"responses":{"200":{"description":"OK"}}}},"/api/proxy":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > openapi-spec.json
     - python3 -m http.server 8000 &
-    - echo $! > http_server.pid
-    - echo "HTTP server started, waiting..."
     - sleep 5
-    - echo "Running ZAP API scan..."
-    - '[ -f zap-rules.tsv ] && zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I -J zap-api-report.json || zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I -J zap-api-report.json || true'
-    - echo "ZAP API scan completed"
-    - find . -name "*api*report*" -type f 2>/dev/null | head -10 || true
-    - find /zap -name "*api*report*" -type f 2>/dev/null | head -10 || true
-    - '[ -f /zap/wrk/zap-api-report.html ] && cp /zap/wrk/zap-api-report.html zap-api-report.html && echo "Report copied from /zap/wrk/" || ([ -f zap-api-report.html ] && echo "Report found in working directory" || (echo "Warning: Report file not found, creating placeholder" && echo "<html><head><title>ZAP API Scan Report</title></head><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-api-report.html))'
-    - ls -la zap-api-report.html
-    - '[ -f http_server.pid ] && kill $(cat http_server.pid) 2>/dev/null || true'
-    - '[ -f http_server.pid ] && rm -f http_server.pid || true'
-    - '[ -f app.pid ] && kill $(cat app.pid) 2>/dev/null || true'
-    - '[ -f app.pid ] && rm -f app.pid || true'
+    - zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+    - cp /zap/wrk/zap-api-report.html zap-api-report.html || echo "<html><body><h1>ZAP API Scan Report</h1><p>No report generated</p></body></html>" > zap-api-report.html
   artifacts:
-    paths:
-      - zap-api-report.html
-      - zap-api-report.json
+    paths: [zap-api-report.html]
     when: always
-    expire_in: 1 week

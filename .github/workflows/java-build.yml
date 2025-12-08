@@ -50,8 +50,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Cache Dependency Check Database
+        uses: actions/cache@v4
+        with:
+          path: .dependency-check/data
+          key: dependency-check-${{ runner.os }}-${{ hashFiles('pom.xml') }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
       - name: Run OWASP Dependency Check
-        run: mvn dependency-check:check -B
+        run: mvn dependency-check:check -B -Ddata.directory=.dependency-check/data -Dnoupdate=false
       - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
