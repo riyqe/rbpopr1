@@ -38,3 +38,16 @@ semgrep-sast:
     paths:
       - gl-sast-report.json
     expire_in: 1 week
+
+dependency-check:
+  stage: test
+  tags:
+    - macos
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3
+  artifacts:
+    paths:
+      - target/dependency-check-report.html
+    expire_in: 1 week
+    when: always
