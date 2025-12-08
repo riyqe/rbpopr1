@@ -44,8 +44,15 @@ dependency-check:
   tags:
     - macos
   image: maven:3.9-eclipse-temurin-21
+  cache:
+    key: dependency-check-data
+    paths:
+      - .dependency-check/data/
+  variables:
+    DEPENDENCY_CHECK_DATA_DIRECTORY: ".dependency-check/data"
   script:
-    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3
+    - mkdir -p .dependency-check/data
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data
   artifacts:
     paths:
       - target/dependency-check-report.html
@@ -63,31 +70,71 @@ zap-baseline:
   script:
     - apt-get update && apt-get install -y default-jre
     - java -jar target/*.jar &
+    - APP_PID=$!
+    - echo "Application started with PID: $APP_PID"
     - sleep 30
-    - mkdir -p zap-reports && chmod 777 zap-reports
     - |
-      if [ -f zap-rules.tsv ]; then
-        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+      # Check if app is running
+      if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
+        echo "Warning: Application may not be running"
       else
-        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I || true
+        echo "Application is responding"
       fi
+    - mkdir -p zap-reports && chmod 777 zap-reports
+    - pwd
+    - ls -la
     - |
+      echo "Running ZAP baseline scan..."
+      if [ -f zap-rules.tsv ]; then
+        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I -J zap-baseline-report.json || true
+      else
+        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I -J zap-baseline-report.json || true
+      fi
+      echo "ZAP scan completed"
+    - |
+      echo "Searching for report files..."
+      find . -name "*baseline*" -type f 2>/dev/null | head -10 || true
+      find /zap -name "*baseline*" -type f 2>/dev/null | head -10 || true
+    - |
+      REPORT_FOUND=false
       if [ -f /zap/wrk/zap-baseline-report.html ]; then
         cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html
         echo "Report copied from /zap/wrk/"
-      elif [ -f zap-baseline-report.html ]; then
+        REPORT_FOUND=true
+      fi
+      if [ -f zap-baseline-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
         echo "Report found in working directory"
-      elif [ -f ./zap-baseline-report.html ]; then
+        REPORT_FOUND=true
+      fi
+      if [ -f ./zap-baseline-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
         cp ./zap-baseline-report.html zap-baseline-report.html
         echo "Report copied from current directory"
-      else
-        echo "Warning: Report file not found, creating placeholder"
-        echo "<html><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed</p></body></html>" > zap-baseline-report.html
+        REPORT_FOUND=true
       fi
-    - ls -la zap-baseline-report.html || echo "File still not found"
+      if [ "$REPORT_FOUND" = "false" ]; then
+        echo "Warning: Report file not found, creating placeholder"
+        cat > zap-baseline-report.html << 'EOF'
+        <html>
+        <head><title>ZAP Baseline Scan Report</title></head>
+        <body>
+          <h1>ZAP Baseline Scan Report</h1>
+          <p>No report generated - scan may have failed or application was not accessible.</p>
+          <p>Check the job logs for more details.</p>
+        </body>
+        </html>
+        EOF
+      fi
+    - ls -la zap-baseline-report.html
+    - |
+      if [ -n "$APP_PID" ]; then
+        kill $APP_PID 2>/dev/null || true
+      fi
   artifacts:
-    paths: [zap-baseline-report.html]
+    paths: 
+      - zap-baseline-report.html
+      - zap-baseline-report.json
     when: always
+    expire_in: 1 week
 
 zap-api:
   stage: test
@@ -100,8 +147,19 @@ zap-api:
   script:
     - apt-get update && apt-get install -y default-jre curl python3
     - java -jar target/*.jar &
+    - APP_PID=$!
+    - echo "Application started with PID: $APP_PID"
     - sleep 30
+    - |
+      # Check if app is running
+      if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
+        echo "Warning: Application may not be running"
+      else
+        echo "Application is responding"
+      fi
     - mkdir -p zap-reports && chmod 777 zap-reports
+    - pwd
+    - ls -la
     - |
       # Create minimal OpenAPI spec for API endpoints
       cat > openapi-spec.json << 'EOF'
@@ -146,28 +204,61 @@ zap-api:
       }
       EOF
     - python3 -m http.server 8000 &
+    - HTTP_SERVER_PID=$!
+    - echo "HTTP server started with PID: $HTTP_SERVER_PID"
     - sleep 5
     - |
+      echo "Running ZAP API scan..."
       if [ -f zap-rules.tsv ]; then
-        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I -J zap-api-report.json || true
       else
-        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I || true
+        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I -J zap-api-report.json || true
       fi
+      echo "ZAP API scan completed"
     - |
-      # Check multiple possible locations for the report
+      echo "Searching for report files..."
+      find . -name "*api*report*" -type f 2>/dev/null | head -10 || true
+      find /zap -name "*api*report*" -type f 2>/dev/null | head -10 || true
+    - |
+      REPORT_FOUND=false
       if [ -f /zap/wrk/zap-api-report.html ]; then
         cp /zap/wrk/zap-api-report.html zap-api-report.html
         echo "Report copied from /zap/wrk/"
-      elif [ -f zap-api-report.html ]; then
+        REPORT_FOUND=true
+      fi
+      if [ -f zap-api-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
         echo "Report found in working directory"
-      elif [ -f ./zap-api-report.html ]; then
+        REPORT_FOUND=true
+      fi
+      if [ -f ./zap-api-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
         cp ./zap-api-report.html zap-api-report.html
         echo "Report copied from current directory"
-      else
-        echo "Warning: Report file not found, creating placeholder"
-        echo "<html><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed</p></body></html>" > zap-api-report.html
+        REPORT_FOUND=true
       fi
-    - ls -la zap-api-report.html || echo "File still not found"
+      if [ "$REPORT_FOUND" = "false" ]; then
+        echo "Warning: Report file not found, creating placeholder"
+        cat > zap-api-report.html << 'EOF'
+        <html>
+        <head><title>ZAP API Scan Report</title></head>
+        <body>
+          <h1>ZAP API Scan Report</h1>
+          <p>No report generated - scan may have failed or application was not accessible.</p>
+          <p>Check the job logs for more details.</p>
+        </body>
+        </html>
+        EOF
+      fi
+    - ls -la zap-api-report.html
+    - |
+      if [ -n "$HTTP_SERVER_PID" ]; then
+        kill $HTTP_SERVER_PID 2>/dev/null || true
+      fi
+      if [ -n "$APP_PID" ]; then
+        kill $APP_PID 2>/dev/null || true
+      fi
   artifacts:
-    paths: [zap-api-report.html]
+    paths:
+      - zap-api-report.html
+      - zap-api-report.json
     when: always
+    expire_in: 1 week

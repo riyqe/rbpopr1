@@ -102,6 +102,8 @@
                     <suppressionFile>owasp-suppressions.xml</suppressionFile>
                     <connectionTimeout>60000</connectionTimeout>
                     <failBuildOnCVSS>11</failBuildOnCVSS>
+                    <dataDirectory>${project.basedir}/.dependency-check/data</dataDirectory>
+                    <skipUpdate>false</skipUpdate>
                 </configuration>
                 <executions>
                     <execution>
