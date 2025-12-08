@@ -70,16 +70,10 @@ zap-baseline:
   script:
     - apt-get update && apt-get install -y default-jre
     - java -jar target/*.jar &
-    - APP_PID=$!
-    - echo "Application started with PID: $APP_PID"
+    - echo $! > app.pid
+    - echo "Application started, waiting..."
     - sleep 30
-    - |
-      # Check if app is running
-      if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
-        echo "Warning: Application may not be running"
-      else
-        echo "Application is responding"
-      fi
+    - curl -f http://localhost:8080 > /dev/null 2>&1 && echo "Application is responding" || echo "Warning: Application may not be running"
     - mkdir -p zap-reports && chmod 777 zap-reports
     - pwd
     - ls -la
@@ -91,43 +85,23 @@ zap-baseline:
         zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I -J zap-baseline-report.json || true
       fi
       echo "ZAP scan completed"
+    - find . -name "*baseline*" -type f 2>/dev/null | head -10 || true
+    - find /zap -name "*baseline*" -type f 2>/dev/null | head -10 || true
     - |
-      echo "Searching for report files..."
-      find . -name "*baseline*" -type f 2>/dev/null | head -10 || true
-      find /zap -name "*baseline*" -type f 2>/dev/null | head -10 || true
-    - |
-      REPORT_FOUND=false
       if [ -f /zap/wrk/zap-baseline-report.html ]; then
         cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html
         echo "Report copied from /zap/wrk/"
-        REPORT_FOUND=true
-      fi
-      if [ -f zap-baseline-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
+      elif [ -f zap-baseline-report.html ]; then
         echo "Report found in working directory"
-        REPORT_FOUND=true
-      fi
-      if [ -f ./zap-baseline-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
-        cp ./zap-baseline-report.html zap-baseline-report.html
-        echo "Report copied from current directory"
-        REPORT_FOUND=true
-      fi
-      if [ "$REPORT_FOUND" = "false" ]; then
+      else
         echo "Warning: Report file not found, creating placeholder"
-        cat > zap-baseline-report.html << 'EOF'
-        <html>
-        <head><title>ZAP Baseline Scan Report</title></head>
-        <body>
-          <h1>ZAP Baseline Scan Report</h1>
-          <p>No report generated - scan may have failed or application was not accessible.</p>
-          <p>Check the job logs for more details.</p>
-        </body>
-        </html>
-        EOF
+        echo "<html><head><title>ZAP Baseline Scan Report</title></head><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-baseline-report.html
       fi
     - ls -la zap-baseline-report.html
     - |
-      if [ -n "$APP_PID" ]; then
-        kill $APP_PID 2>/dev/null || true
+      if [ -f app.pid ]; then
+        kill $(cat app.pid) 2>/dev/null || true
+        rm -f app.pid
       fi
   artifacts:
     paths: 
@@ -147,65 +121,18 @@ zap-api:
   script:
     - apt-get update && apt-get install -y default-jre curl python3
     - java -jar target/*.jar &
-    - APP_PID=$!
-    - echo "Application started with PID: $APP_PID"
+    - echo $! > app.pid
+    - echo "Application started, waiting..."
     - sleep 30
-    - |
-      # Check if app is running
-      if ! curl -f http://localhost:8080 > /dev/null 2>&1; then
-        echo "Warning: Application may not be running"
-      else
-        echo "Application is responding"
-      fi
+    - curl -f http://localhost:8080 > /dev/null 2>&1 && echo "Application is responding" || echo "Warning: Application may not be running"
     - mkdir -p zap-reports && chmod 777 zap-reports
     - pwd
     - ls -la
     - |
-      # Create minimal OpenAPI spec for API endpoints
-      cat > openapi-spec.json << 'EOF'
-      {
-        "openapi": "3.0.0",
-        "info": {
-          "title": "Course Management API",
-          "version": "1.0.0"
-        },
-        "servers": [{"url": "http://localhost:8080"}],
-        "paths": {
-          "/api/courses": {
-            "get": {"responses": {"200": {"description": "OK"}}},
-            "post": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/courses/{id}": {
-            "get": {"responses": {"200": {"description": "OK"}}},
-            "put": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/courses/search": {
-            "get": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/courses/import": {
-            "get": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/students": {
-            "get": {"responses": {"200": {"description": "OK"}}},
-            "post": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/students/{id}": {
-            "get": {"responses": {"200": {"description": "OK"}}},
-            "put": {"responses": {"200": {"description": "OK"}}},
-            "delete": {"responses": {"204": {"description": "No Content"}}}
-          },
-          "/api/xml/parse": {
-            "post": {"responses": {"200": {"description": "OK"}}}
-          },
-          "/api/proxy": {
-            "get": {"responses": {"200": {"description": "OK"}}}
-          }
-        }
-      }
-      EOF
+      echo '{"openapi":"3.0.0","info":{"title":"Course Management API","version":"1.0.0"},"servers":[{"url":"http://localhost:8080"}],"paths":{"/api/courses":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/courses/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}}},"/api/courses/search":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/courses/import":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/students":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/students/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}},"delete":{"responses":{"204":{"description":"No Content"}}}},"/api/xml/parse":{"post":{"responses":{"200":{"description":"OK"}}}},"/api/proxy":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > openapi-spec.json
     - python3 -m http.server 8000 &
-    - HTTP_SERVER_PID=$!
-    - echo "HTTP server started with PID: $HTTP_SERVER_PID"
+    - echo $! > http_server.pid
+    - echo "HTTP server started, waiting..."
     - sleep 5
     - |
       echo "Running ZAP API scan..."
@@ -215,46 +142,27 @@ zap-api:
         zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I -J zap-api-report.json || true
       fi
       echo "ZAP API scan completed"
+    - find . -name "*api*report*" -type f 2>/dev/null | head -10 || true
+    - find /zap -name "*api*report*" -type f 2>/dev/null | head -10 || true
     - |
-      echo "Searching for report files..."
-      find . -name "*api*report*" -type f 2>/dev/null | head -10 || true
-      find /zap -name "*api*report*" -type f 2>/dev/null | head -10 || true
-    - |
-      REPORT_FOUND=false
       if [ -f /zap/wrk/zap-api-report.html ]; then
         cp /zap/wrk/zap-api-report.html zap-api-report.html
         echo "Report copied from /zap/wrk/"
-        REPORT_FOUND=true
-      fi
-      if [ -f zap-api-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
+      elif [ -f zap-api-report.html ]; then
         echo "Report found in working directory"
-        REPORT_FOUND=true
-      fi
-      if [ -f ./zap-api-report.html ] && [ "$REPORT_FOUND" = "false" ]; then
-        cp ./zap-api-report.html zap-api-report.html
-        echo "Report copied from current directory"
-        REPORT_FOUND=true
-      fi
-      if [ "$REPORT_FOUND" = "false" ]; then
+      else
         echo "Warning: Report file not found, creating placeholder"
-        cat > zap-api-report.html << 'EOF'
-        <html>
-        <head><title>ZAP API Scan Report</title></head>
-        <body>
-          <h1>ZAP API Scan Report</h1>
-          <p>No report generated - scan may have failed or application was not accessible.</p>
-          <p>Check the job logs for more details.</p>
-        </body>
-        </html>
-        EOF
+        echo "<html><head><title>ZAP API Scan Report</title></head><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-api-report.html
       fi
     - ls -la zap-api-report.html
     - |
-      if [ -n "$HTTP_SERVER_PID" ]; then
-        kill $HTTP_SERVER_PID 2>/dev/null || true
+      if [ -f http_server.pid ]; then
+        kill $(cat http_server.pid) 2>/dev/null || true
+        rm -f http_server.pid
       fi
-      if [ -n "$APP_PID" ]; then
-        kill $APP_PID 2>/dev/null || true
+      if [ -f app.pid ]; then
+        kill $(cat app.pid) 2>/dev/null || true
+        rm -f app.pid
       fi
   artifacts:
     paths:
