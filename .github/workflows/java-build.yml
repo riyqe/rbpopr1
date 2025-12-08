@@ -25,7 +25,6 @@ jobs:
   sast:
     name: Semgrep SAST Scan
     runs-on: ubuntu-latest
-
     needs: build
 
     container: returntocorp/semgrep
@@ -42,3 +41,200 @@ jobs:
         with:
           sarif_file: semgrep.sarif
         if: always()
+
+  dependency-check:
+    name: SCA Analysis
+    runs-on: ubuntu-latest
+    needs: build
+    container: maven:3.9-eclipse-temurin-21
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache Dependency Check Database
+        uses: actions/cache@v4
+        with:
+          path: .dependency-check/data
+          key: dependency-check-${{ runner.os }}-global
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
+      - name: Run OWASP Dependency Check
+        run: mvn dependency-check:check -B -Ddata.directory=.dependency-check/data
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: target/dependency-check-report.html
+
+  dast-baseline:
+    name: DAST Baseline Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: java-application
+          path: target
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Start Application
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          echo "Application started, waiting..."
+          sleep 30
+      - name: ZAP Baseline Scan
+        id: zap-baseline
+        uses: zaproxy/action-baseline@v0.9.0
+        with:
+          target: 'http://localhost:8080'
+          rules_file_name: 'zap-rules.tsv'
+          allow_issue_writing: false
+          fail_action: false
+        continue-on-error: true
+
+      - name: Find ZAP Baseline Reports
+        if: always()
+        run: |
+          echo "Searching for ZAP baseline reports..."
+          find . -name "*.html" -type f 2>/dev/null | head -20 || true
+          echo "---"
+          ls -la *.html 2>/dev/null || echo "No HTML reports found in root directory"
+          echo "---"
+          find /home/runner/work -name "*zap*" -name "*.html" -type f 2>/dev/null | head -10 || true
+        continue-on-error: true
+
+      - name: Upload ZAP Baseline Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-report
+          path: |
+            zap-report.html
+            report_html.html
+            zap-baseline-report.html
+            baseline-report.html
+            **/zap*.html
+          retention-days: 7
+          if-no-files-found: ignore
+
+  dast-api:
+    name: DAST API Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: java-application
+          path: target
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Start Application
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          sleep 30
+      - name: Create OpenAPI Specification
+        run: |
+          cat > openapi-spec.json << 'EOF'
+          {
+            "openapi": "3.0.0",
+            "info": {
+              "title": "Course Management API",
+              "version": "1.0.0"
+            },
+            "servers": [{"url": "http://localhost:8080"}],
+            "paths": {
+              "/api/courses": {
+                "get": {"responses": {"200": {"description": "OK"}}},
+                "post": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/courses/{id}": {
+                "get": {"responses": {"200": {"description": "OK"}}},
+                "put": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/courses/search": {
+                "get": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/courses/import": {
+                "get": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/students": {
+                "get": {"responses": {"200": {"description": "OK"}}},
+                "post": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/students/{id}": {
+                "get": {"responses": {"200": {"description": "OK"}}},
+                "put": {"responses": {"200": {"description": "OK"}}},
+                "delete": {"responses": {"204": {"description": "No Content"}}}
+              },
+              "/api/xml/parse": {
+                "post": {"responses": {"200": {"description": "OK"}}}
+              },
+              "/api/proxy": {
+                "get": {"responses": {"200": {"description": "OK"}}}
+              }
+            }
+          }
+          EOF
+      - name: Serve OpenAPI Spec
+        run: |
+          python3 -m http.server 8000 &
+          echo $! > http_server.pid
+          sleep 3
+      - name: ZAP API Scan
+        id: zap-api
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          target: 'http://localhost:8000/openapi-spec.json'
+          format: openapi
+          rules_file_name: 'zap-rules.tsv'
+          allow_issue_writing: false
+          fail_action: false
+        continue-on-error: true
+
+      - name: Stop HTTP Server
+        if: always()
+        run: |
+          if [ -f http_server.pid ]; then
+            kill $(cat http_server.pid) || true
+          fi
+      - name: Find ZAP API Reports
+        if: always()
+        run: |
+          echo "Searching for ZAP API reports..."
+          find . -name "*.html" -type f 2>/dev/null | head -20 || true
+          echo "---"
+          ls -la *.html 2>/dev/null || echo "No HTML reports found in root directory"
+          echo "---"
+          find /home/runner/work -name "*zap*" -name "*.html" -type f 2>/dev/null | head -10 || true
+        continue-on-error: true
+
+      - name: Upload ZAP API Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-api-report
+          path: |
+            zap-report.html
+            report_html.html
+            zap-api-report.html
+            api-report.html
+            **/zap*.html
+          retention-days: 7
+          if-no-files-found: ignore

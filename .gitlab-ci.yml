@@ -38,3 +38,67 @@ semgrep-sast:
     paths:
       - gl-sast-report.json
     expire_in: 1 week
+
+dependency-check:
+  stage: test
+  tags:
+    - macos
+  image: maven:3.9-eclipse-temurin-21
+  cache:
+    key: dependency-check-global
+    paths:
+      - .dependency-check/data/
+    policy: pull-push
+  variables:
+    DEPENDENCY_CHECK_DATA_DIRECTORY: ".dependency-check/data"
+  script:
+    - mkdir -p .dependency-check/data
+    - mkdir -p target
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data || true
+    - '[ -f target/dependency-check-report.html ] || echo "<html><head><title>Dependency Check Report</title></head><body><h1>Dependency Check Report</h1><p>Report generation failed. Check job logs for details.</p></body></html>" > target/dependency-check-report.html'
+  artifacts:
+    paths:
+      - target/dependency-check-report.html
+    expire_in: 1 week
+    when: always
+
+zap-baseline:
+  stage: test
+  tags: [macos]
+  image:
+    name: zaproxy/zap-stable
+    entrypoint: [""]
+  dependencies: [build-job]
+  allow_failure: true
+  script:
+    - apt-get update && apt-get install -y default-jre
+    - java -jar target/*.jar &
+    - sleep 30
+    - mkdir -p zap-reports && chmod 777 zap-reports
+    - zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+    - cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html || echo "<html><body><h1>ZAP Baseline Scan Report</h1><p>No report generated</p></body></html>" > zap-baseline-report.html
+  artifacts:
+    paths: [zap-baseline-report.html]
+    when: always
+
+zap-api:
+  stage: test
+  tags: [macos]
+  image:
+    name: zaproxy/zap-stable
+    entrypoint: [""]
+  dependencies: [build-job]
+  allow_failure: true
+  script:
+    - apt-get update && apt-get install -y default-jre curl python3
+    - java -jar target/*.jar &
+    - sleep 30
+    - mkdir -p zap-reports && chmod 777 zap-reports
+    - echo '{"openapi":"3.0.0","info":{"title":"Course Management API","version":"1.0.0"},"servers":[{"url":"http://localhost:8080"}],"paths":{"/api/courses":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/courses/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}}},"/api/courses/search":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/courses/import":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/students":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/students/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}},"delete":{"responses":{"204":{"description":"No Content"}}}},"/api/xml/parse":{"post":{"responses":{"200":{"description":"OK"}}}},"/api/proxy":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > openapi-spec.json
+    - python3 -m http.server 8000 &
+    - sleep 5
+    - zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+    - cp /zap/wrk/zap-api-report.html zap-api-report.html || echo "<html><body><h1>ZAP API Scan Report</h1><p>No report generated</p></body></html>" > zap-api-report.html
+  artifacts:
+    paths: [zap-api-report.html]
+    when: always
