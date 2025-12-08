@@ -3,10 +3,11 @@ spring:
     name: course-management
   h2:
     console:
+      # для лабы оставляем консоль, защитив Security
       enabled: true
       path: /h2-console
       settings:
-        web-allow-others: true
+        web-allow-others: false # запрещаем доступ внешним
   datasource:
     url: jdbc:h2:mem:courseapp;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -20,10 +21,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,info" # убираем звездочку, открываем только безопасные
 server:
   error:
-    include-stacktrace: ALWAYS
+    # устранение утечки стектрейса
+    include-stacktrace: NEVER
 app:
   plugin:
     url:
