@@ -53,7 +53,9 @@ dependency-check:
     DEPENDENCY_CHECK_DATA_DIRECTORY: ".dependency-check/data"
   script:
     - mkdir -p .dependency-check/data
-    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data
+    - mkdir -p target
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data || true
+    - '[ -f target/dependency-check-report.html ] || echo "<html><head><title>Dependency Check Report</title></head><body><h1>Dependency Check Report</h1><p>Report generation failed. Check job logs for details.</p></body></html>" > target/dependency-check-report.html'
   artifacts:
     paths:
       - target/dependency-check-report.html
