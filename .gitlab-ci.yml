@@ -77,32 +77,15 @@ zap-baseline:
     - mkdir -p zap-reports && chmod 777 zap-reports
     - pwd
     - ls -la
-    - |
-      echo "Running ZAP baseline scan..."
-      if [ -f zap-rules.tsv ]; then
-        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I -J zap-baseline-report.json || true
-      else
-        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I -J zap-baseline-report.json || true
-      fi
-      echo "ZAP scan completed"
+    - echo "Running ZAP baseline scan..."
+    - '[ -f zap-rules.tsv ] && zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I -J zap-baseline-report.json || zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I -J zap-baseline-report.json || true'
+    - echo "ZAP scan completed"
     - find . -name "*baseline*" -type f 2>/dev/null | head -10 || true
     - find /zap -name "*baseline*" -type f 2>/dev/null | head -10 || true
-    - |
-      if [ -f /zap/wrk/zap-baseline-report.html ]; then
-        cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html
-        echo "Report copied from /zap/wrk/"
-      elif [ -f zap-baseline-report.html ]; then
-        echo "Report found in working directory"
-      else
-        echo "Warning: Report file not found, creating placeholder"
-        echo "<html><head><title>ZAP Baseline Scan Report</title></head><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-baseline-report.html
-      fi
+    - '[ -f /zap/wrk/zap-baseline-report.html ] && cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html && echo "Report copied from /zap/wrk/" || ([ -f zap-baseline-report.html ] && echo "Report found in working directory" || (echo "Warning: Report file not found, creating placeholder" && echo "<html><head><title>ZAP Baseline Scan Report</title></head><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-baseline-report.html))'
     - ls -la zap-baseline-report.html
-    - |
-      if [ -f app.pid ]; then
-        kill $(cat app.pid) 2>/dev/null || true
-        rm -f app.pid
-      fi
+    - '[ -f app.pid ] && kill $(cat app.pid) 2>/dev/null || true'
+    - '[ -f app.pid ] && rm -f app.pid || true'
   artifacts:
     paths: 
       - zap-baseline-report.html
@@ -128,42 +111,22 @@ zap-api:
     - mkdir -p zap-reports && chmod 777 zap-reports
     - pwd
     - ls -la
-    - |
-      echo '{"openapi":"3.0.0","info":{"title":"Course Management API","version":"1.0.0"},"servers":[{"url":"http://localhost:8080"}],"paths":{"/api/courses":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/courses/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}}},"/api/courses/search":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/courses/import":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/students":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/students/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}},"delete":{"responses":{"204":{"description":"No Content"}}}},"/api/xml/parse":{"post":{"responses":{"200":{"description":"OK"}}}},"/api/proxy":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > openapi-spec.json
+    - echo '{"openapi":"3.0.0","info":{"title":"Course Management API","version":"1.0.0"},"servers":[{"url":"http://localhost:8080"}],"paths":{"/api/courses":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/courses/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}}},"/api/courses/search":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/courses/import":{"get":{"responses":{"200":{"description":"OK"}}}},"/api/students":{"get":{"responses":{"200":{"description":"OK"}}},"post":{"responses":{"200":{"description":"OK"}}}},"/api/students/{id}":{"get":{"responses":{"200":{"description":"OK"}}},"put":{"responses":{"200":{"description":"OK"}}},"delete":{"responses":{"204":{"description":"No Content"}}}},"/api/xml/parse":{"post":{"responses":{"200":{"description":"OK"}}}},"/api/proxy":{"get":{"responses":{"200":{"description":"OK"}}}}}}' > openapi-spec.json
     - python3 -m http.server 8000 &
     - echo $! > http_server.pid
     - echo "HTTP server started, waiting..."
     - sleep 5
-    - |
-      echo "Running ZAP API scan..."
-      if [ -f zap-rules.tsv ]; then
-        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I -J zap-api-report.json || true
-      else
-        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I -J zap-api-report.json || true
-      fi
-      echo "ZAP API scan completed"
+    - echo "Running ZAP API scan..."
+    - '[ -f zap-rules.tsv ] && zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I -J zap-api-report.json || zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I -J zap-api-report.json || true'
+    - echo "ZAP API scan completed"
     - find . -name "*api*report*" -type f 2>/dev/null | head -10 || true
     - find /zap -name "*api*report*" -type f 2>/dev/null | head -10 || true
-    - |
-      if [ -f /zap/wrk/zap-api-report.html ]; then
-        cp /zap/wrk/zap-api-report.html zap-api-report.html
-        echo "Report copied from /zap/wrk/"
-      elif [ -f zap-api-report.html ]; then
-        echo "Report found in working directory"
-      else
-        echo "Warning: Report file not found, creating placeholder"
-        echo "<html><head><title>ZAP API Scan Report</title></head><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-api-report.html
-      fi
+    - '[ -f /zap/wrk/zap-api-report.html ] && cp /zap/wrk/zap-api-report.html zap-api-report.html && echo "Report copied from /zap/wrk/" || ([ -f zap-api-report.html ] && echo "Report found in working directory" || (echo "Warning: Report file not found, creating placeholder" && echo "<html><head><title>ZAP API Scan Report</title></head><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed or application was not accessible.</p><p>Check the job logs for more details.</p></body></html>" > zap-api-report.html))'
     - ls -la zap-api-report.html
-    - |
-      if [ -f http_server.pid ]; then
-        kill $(cat http_server.pid) 2>/dev/null || true
-        rm -f http_server.pid
-      fi
-      if [ -f app.pid ]; then
-        kill $(cat app.pid) 2>/dev/null || true
-        rm -f app.pid
-      fi
+    - '[ -f http_server.pid ] && kill $(cat http_server.pid) 2>/dev/null || true'
+    - '[ -f http_server.pid ] && rm -f http_server.pid || true'
+    - '[ -f app.pid ] && kill $(cat app.pid) 2>/dev/null || true'
+    - '[ -f app.pid ] && rm -f app.pid || true'
   artifacts:
     paths:
       - zap-api-report.html
