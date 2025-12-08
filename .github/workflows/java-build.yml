@@ -57,3 +57,44 @@ jobs:
         with:
           name: dependency-check-report
           path: target/dependency-check-report.html
+
+  dast-baseline:
+    name: DAST Baseline
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: java-application, path: target }
+      - uses: actions/setup-java@v3
+        with: { distribution: 'temurin', java-version: '21' }
+      - run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          sleep 30
+          touch zap-rules.tsv
+      - uses: zaproxy/action-baseline@v0.9.0
+        with:
+          target: 'http://localhost:8080'
+          rules_file_name: 'zap-rules.tsv'
+          fail_action: false
+
+  dast-api:
+    name: DAST API
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: java-application, path: target }
+      - uses: actions/setup-java@v3
+        with: { distribution: 'temurin', java-version: '21' }
+      - run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          sleep 30
+          touch zap-rules.tsv
+      - uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          target: 'http://localhost:8080/v3/api-docs'
+          format: openapi
+          rules_file_name: 'zap-rules.tsv'
+          fail_action: false
