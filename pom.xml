@@ -94,6 +94,23 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <configuration>
+                    <format>HTML</format>
+                    <suppressionFile>owasp-suppressions.xml</suppressionFile>
+                    <connectionTimeout>60000</connectionTimeout>
+                    <failBuildOnCVSS>11</failBuildOnCVSS>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
