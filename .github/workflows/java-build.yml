@@ -2,7 +2,7 @@ name: Java CI Build and SAST
 
 on:
   pull_request:
-    branches: [ "main3" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -46,6 +46,9 @@ jobs:
   dependency-check:
     name: SCA Analysis
     runs-on: ubuntu-latest
+
+    needs: build
+
     container: maven:3.9-eclipse-temurin-21
     steps:
       - name: Checkout repository
