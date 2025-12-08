@@ -42,3 +42,70 @@ jobs:
         with:
           sarif_file: semgrep.sarif
         if: always()
+
+  dast-baseline:
+    name: DAST Baseline Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: java-application
+          path: target
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Start Application
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          echo "Application started, waiting..."
+          sleep 30
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.9.0
+        with:
+          target: 'http://localhost:8080'
+          rules_file_name: 'zap-rules.tsv'
+          allow_issue_writing: false
+          fail_action: false
+
+  dast-api:
+    name: DAST API Scan
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: java-application
+          path: target
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Start Application
+        run: |
+          nohup java -jar target/*.jar > app.log 2>&1 &
+          sleep 30
+
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          target: 'http://localhost:8080/v3/api-docs'
+          format: openapi
+          rules_file_name: 'zap-rules.tsv'
+          allow_issue_writing: false
+          fail_action: false

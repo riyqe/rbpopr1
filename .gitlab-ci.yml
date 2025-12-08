@@ -38,3 +38,55 @@ semgrep-sast:
     paths:
       - gl-sast-report.json
     expire_in: 1 week
+
+zap-baseline:
+    stage: test
+    tags:
+      - macos
+    image:
+      name: zaproxy/zap-stable
+      entrypoint: [ "" ]
+    dependencies:
+      - build-job
+
+    script:
+      - apt-get update && apt-get install -y default-jre
+      - java -jar target/*.jar &
+      - sleep 30
+
+      - mkdir -p zap-reports
+      - chmod 777 zap-reports
+
+      - zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+
+      - cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html || true
+
+    artifacts:
+      paths:
+        - zap-baseline-report.html
+      when: always
+
+zap-api:
+    stage: test
+    tags:
+      - macos
+    image:
+      name: zaproxy/zap-stable
+      entrypoint: [ "" ]
+    dependencies:
+      - build-job
+    script:
+      - apt-get update && apt-get install -y default-jre
+      - java -jar target/*.jar &
+      - sleep 30
+      - mkdir -p zap-reports
+      - chmod 777 zap-reports
+
+      - zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+
+      - cp /zap/wrk/zap-api-report.html zap-api-report.html || true
+
+    artifacts:
+      paths:
+        - zap-api-report.html
+      when: always
