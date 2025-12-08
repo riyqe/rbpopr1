@@ -65,8 +65,26 @@ zap-baseline:
     - java -jar target/*.jar &
     - sleep 30
     - mkdir -p zap-reports && chmod 777 zap-reports
-    - zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
-    - cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html || true
+    - |
+      if [ -f zap-rules.tsv ]; then
+        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+      else
+        zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -I || true
+      fi
+    - |
+      if [ -f /zap/wrk/zap-baseline-report.html ]; then
+        cp /zap/wrk/zap-baseline-report.html zap-baseline-report.html
+        echo "Report copied from /zap/wrk/"
+      elif [ -f zap-baseline-report.html ]; then
+        echo "Report found in working directory"
+      elif [ -f ./zap-baseline-report.html ]; then
+        cp ./zap-baseline-report.html zap-baseline-report.html
+        echo "Report copied from current directory"
+      else
+        echo "Warning: Report file not found, creating placeholder"
+        echo "<html><body><h1>ZAP Baseline Scan Report</h1><p>No report generated - scan may have failed</p></body></html>" > zap-baseline-report.html
+      fi
+    - ls -la zap-baseline-report.html || echo "File still not found"
   artifacts:
     paths: [zap-baseline-report.html]
     when: always
@@ -80,12 +98,76 @@ zap-api:
   dependencies: [build-job]
   allow_failure: true
   script:
-    - apt-get update && apt-get install -y default-jre
+    - apt-get update && apt-get install -y default-jre curl python3
     - java -jar target/*.jar &
     - sleep 30
     - mkdir -p zap-reports && chmod 777 zap-reports
-    - zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
-    - cp /zap/wrk/zap-api-report.html zap-api-report.html || true
+    - |
+      # Create minimal OpenAPI spec for API endpoints
+      cat > openapi-spec.json << 'EOF'
+      {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Course Management API",
+          "version": "1.0.0"
+        },
+        "servers": [{"url": "http://localhost:8080"}],
+        "paths": {
+          "/api/courses": {
+            "get": {"responses": {"200": {"description": "OK"}}},
+            "post": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/courses/{id}": {
+            "get": {"responses": {"200": {"description": "OK"}}},
+            "put": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/courses/search": {
+            "get": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/courses/import": {
+            "get": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/students": {
+            "get": {"responses": {"200": {"description": "OK"}}},
+            "post": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/students/{id}": {
+            "get": {"responses": {"200": {"description": "OK"}}},
+            "put": {"responses": {"200": {"description": "OK"}}},
+            "delete": {"responses": {"204": {"description": "No Content"}}}
+          },
+          "/api/xml/parse": {
+            "post": {"responses": {"200": {"description": "OK"}}}
+          },
+          "/api/proxy": {
+            "get": {"responses": {"200": {"description": "OK"}}}
+          }
+        }
+      }
+      EOF
+    - python3 -m http.server 8000 &
+    - sleep 5
+    - |
+      if [ -f zap-rules.tsv ]; then
+        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+      else
+        zap-api-scan.py -t http://localhost:8000/openapi-spec.json -f openapi -r zap-api-report.html -I || true
+      fi
+    - |
+      # Check multiple possible locations for the report
+      if [ -f /zap/wrk/zap-api-report.html ]; then
+        cp /zap/wrk/zap-api-report.html zap-api-report.html
+        echo "Report copied from /zap/wrk/"
+      elif [ -f zap-api-report.html ]; then
+        echo "Report found in working directory"
+      elif [ -f ./zap-api-report.html ]; then
+        cp ./zap-api-report.html zap-api-report.html
+        echo "Report copied from current directory"
+      else
+        echo "Warning: Report file not found, creating placeholder"
+        echo "<html><body><h1>ZAP API Scan Report</h1><p>No report generated - scan may have failed</p></body></html>" > zap-api-report.html
+      fi
+    - ls -la zap-api-report.html || echo "File still not found"
   artifacts:
     paths: [zap-api-report.html]
     when: always
