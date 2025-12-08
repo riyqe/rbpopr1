@@ -1,0 +1,54 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main' && $CI_PIPELINE_SOURCE == 'push'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
+
+stages:
+  - build
+  - test
+
+build-job:
+  stage: build
+  tags:
+    - macos
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - echo "пакуем наш проект..."
+    - mvn package
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 day
+
+semgrep-sast:
+  stage: test
+  tags:
+    - macos
+  image: returntocorp/semgrep
+
+  variables:
+    GIT_STRATEGY: clone
+
+  script:
+    - semgrep scan --config=auto --gitlab-sast --output=gl-sast-report.json .
+
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths:
+      - gl-sast-report.json
+    expire_in: 1 week
+
+dependency-check:
+  stage: test
+  tags:
+    - macos
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3
+  artifacts:
+    paths:
+      - target/dependency-check-report.html
+    expire_in: 1 week
+    when: always
