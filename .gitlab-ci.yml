@@ -45,7 +45,7 @@ dependency-check:
     - macos
   image: maven:3.9-eclipse-temurin-21
   cache:
-    key: dependency-check-$CI_COMMIT_REF_SLUG
+    key: dependency-check-global
     paths:
       - .dependency-check/data/
     policy: pull-push
@@ -53,7 +53,7 @@ dependency-check:
     DEPENDENCY_CHECK_DATA_DIRECTORY: ".dependency-check/data"
   script:
     - mkdir -p .dependency-check/data
-    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data -Dnoupdate=false
+    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3 -Ddata.directory=.dependency-check/data
   artifacts:
     paths:
       - target/dependency-check-report.html
