@@ -24,8 +24,10 @@ management:
         include: "health,info" # убираем звездочку, открываем только безопасные
 server:
   error:
-    # устранение утечки стектрейса
-    include-stacktrace: NEVER
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
 app:
   plugin:
     url:

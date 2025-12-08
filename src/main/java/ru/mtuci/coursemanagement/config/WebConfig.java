@@ -18,10 +18,7 @@ public class WebConfig {
                 // отключаем CSRF для API (для ZAP, чтобы мог тестировать POST),
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers
-                        // защита от Clickjacking (X-Frame-Options)
                         .frameOptions(frame -> frame.sameOrigin())
-                        // защита от сниффинга (X-Content-Type-Options)
-                        .contentTypeOptions(withDefaults())
                 );
 
         return http.build();
