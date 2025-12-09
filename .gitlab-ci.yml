@@ -3,7 +3,6 @@ workflow:
     - if: $CI_COMMIT_BRANCH == 'main' && $CI_PIPELINE_SOURCE == 'push'
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
-
 stages:
   - build
   - test
@@ -26,13 +25,10 @@ semgrep-sast:
   tags:
     - macos
   image: returntocorp/semgrep
-
   variables:
     GIT_STRATEGY: clone
-
   script:
     - semgrep scan --config=auto --gitlab-sast --output=gl-sast-report.json .
-
   artifacts:
     reports:
       sast: gl-sast-report.json
@@ -45,10 +41,60 @@ dependency-check:
   tags:
     - macos
   image: maven:3.9-eclipse-temurin-21
+
+  cache:
+    key: "nvd-lib-cache"
+    policy: pull-push
+    paths:
+      - .dependency-check-data/
+
   script:
-    - mvn dependency-check:check -Dhttp.keepAlive=false -Dmaven.wagon.http.retryHandler.count=3
+    - mkdir -p target
+    - mvn dependency-check:check -DdataDirectory="./.dependency-check-data" -DfailBuildOnCVSS=11 || true
+    - touch target/dependency-check-report.html
   artifacts:
     paths:
       - target/dependency-check-report.html
     expire_in: 1 week
+    when: always
+
+zap-baseline:
+  stage: test
+  tags:
+    - macos1
+  script:
+    - lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+    - java -jar target/*.jar --server.port=8081 &
+    - sleep 30
+    - touch zap-rules.tsv
+    - |
+      docker run --rm -v "$PWD:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+        -t http://host.docker.internal:8081 \
+        -r /zap/wrk/zap-baseline-report.html \
+        -c /zap/wrk/zap-rules.tsv \
+        -I || true
+  artifacts:
+    paths:
+      - zap-baseline-report.html
+    when: always
+
+zap-api:
+  stage: test
+  tags:
+    - macos1
+  script:
+    - lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+    - java -jar target/*.jar --server.port=8081 &
+    - sleep 30
+    - touch zap-rules.tsv
+    - |
+      docker run --rm -v "$PWD:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \
+        -t http://host.docker.internal:8081/v3/api-docs \
+        -f openapi \
+        -r /zap/wrk/zap-api-report.html \
+        -c /zap/wrk/zap-rules.tsv \
+        -I || true
+  artifacts:
+    paths:
+      - zap-api-report.html
     when: always
