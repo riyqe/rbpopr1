@@ -60,41 +60,53 @@ dependency-check:
 
 zap-baseline:
   stage: test
-  tags:
-    - macos1
+  tags: [macos]
+  image:
+    name: zaproxy/zap-stable
+    entrypoint: [""]
+  dependencies: [build-job]
+  allow_failure: true
   script:
-    - lsof -ti:8081 | xargs kill -9 2>/dev/null || true
-    - java -jar target/*.jar --server.port=8081 &
+    - wget -q https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+    - tar -xzf jdk-21_linux-x64_bin.tar.gz
+    - export JAVA_HOME=$(pwd)/jdk-21.0.*
+    - export PATH=$JAVA_HOME/bin:$PATH
+
+    - java -jar target/*.jar &
     - sleep 30
+
     - touch zap-rules.tsv
-    - |
-      docker run --rm -v "$PWD:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-        -t http://host.docker.internal:8081 \
-        -r /zap/wrk/zap-baseline-report.html \
-        -c /zap/wrk/zap-rules.tsv \
-        -I || true
+
+    - /zap/zap-baseline.py -t http://localhost:8080 -r zap-baseline-report.html -c zap-rules.tsv -I || true
+    - find /zap -name "zap-baseline-report.html" -exec cp {} . \; || true
+
   artifacts:
-    paths:
-      - zap-baseline-report.html
+    paths: [zap-baseline-report.html]
     when: always
+    expire_in: 1 week
 
 zap-api:
   stage: test
-  tags:
-    - macos1
+  tags: [macos]
+  image:
+    name: zaproxy/zap-stable
+    entrypoint: [""]
+  dependencies: [build-job]
+  allow_failure: true
   script:
-    - lsof -ti:8081 | xargs kill -9 2>/dev/null || true
-    - java -jar target/*.jar --server.port=8081 &
+    - wget -q https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz
+    - tar -xzf jdk-21_linux-x64_bin.tar.gz
+    - export JAVA_HOME=$(pwd)/jdk-21.0.*
+    - export PATH=$JAVA_HOME/bin:$PATH
+
+    - java -jar target/*.jar &
     - sleep 30
     - touch zap-rules.tsv
-    - |
-      docker run --rm -v "$PWD:/zap/wrk/:rw" ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \
-        -t http://host.docker.internal:8081/v3/api-docs \
-        -f openapi \
-        -r /zap/wrk/zap-api-report.html \
-        -c /zap/wrk/zap-rules.tsv \
-        -I || true
+
+    - /zap/zap-api-scan.py -t http://localhost:8080/v3/api-docs -f openapi -r zap-api-report.html -c zap-rules.tsv -I || true
+    - find /zap -name "zap-api-report.html" -exec cp {} . \; || true
+
   artifacts:
-    paths:
-      - zap-api-report.html
+    paths: [zap-api-report.html]
     when: always
+    expire_in: 1 week
