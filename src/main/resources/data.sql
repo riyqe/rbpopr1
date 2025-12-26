@@ -17,3 +17,7 @@ INSERT INTO COURSES (id, title, description, teacher_id)
 VALUES (1, 'RBPO', 'Basics of securing apps', 1),
        (2, 'Database Basics', 'Intro to SQL', 1);
 ALTER TABLE COURSES ALTER COLUMN ID RESTART WITH 3;
+
+-- пароль = password, BCrypt (strength=10)
+UPDATE users SET password='$2a$10$EixZaYRU1zW63HzOJBr6Nu/vJyJrKxVDZxNGGJJVipX6VJqY6VUXO' WHERE username='teacher';
+UPDATE users SET password='$2a$10$EixZaYRU1zW63HzOJBr6Nu/vJyJrKxVDZxNGGJJVipX6VJqY6VUXO' WHERE username='student';
