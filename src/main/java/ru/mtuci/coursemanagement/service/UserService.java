@@ -16,7 +16,10 @@ public class UserService {
         return repo.findByUsername(u);
     }
 
+    private final BCryptPasswordEncoder encoder;
+
     public User save(User u) {
+        u.setPassword(encoder.encode(u.getPassword()));
         return repo.save(u);
     }
 }
