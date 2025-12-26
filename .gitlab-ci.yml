@@ -4,8 +4,23 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
 stages:
+  - secrets
   - build
   - test
+
+secrets-scan:
+  stage: secrets
+  tags: [macos]
+  image: zricethezav/gitleaks:latest
+  variables:
+           GITLEAKS_TOKEN: "$CI_JOB_TOKEN"
+  only:
+    - merge_requests
+  script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - gitleaks detect --source . --verbose --redact \
+      --log-opts="origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME..HEAD"
+  allow_failure: false
 
 build-job:
   stage: build
