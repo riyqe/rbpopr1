@@ -34,7 +34,7 @@ public class AuthController {
         if (opt.isPresent()) {
             User u = opt.get();
             if (u.getPassword().equals(password)) {
-                log.info("User {} logged in", username, password);
+                log.info("User {} logged in", username.replaceAll("[\r\n]", ""));
                 HttpSession s = req.getSession(true);
                 s.setAttribute("username", username);
                 s.setAttribute("role", u.getRole());
