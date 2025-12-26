@@ -38,23 +38,21 @@ semgrep-sast:
 
 dependency-check:
   stage: test
-  tags:
-    - macos
+  tags: [macos]
   image: maven:3.9-eclipse-temurin-21
 
   cache:
     key: "nvd-lib-cache"
-    policy: pull-push
     paths:
       - .dependency-check-data/
-
+      -
   script:
     - mkdir -p target
-    - mvn dependency-check:check -DdataDirectory="./.dependency-check-data" -DfailBuildOnCVSS=11 || true
+    - mvn dependency-check:check -DdataDirectory=.dependency-check-data -DfailBuildOnCVSS=11 || true
     - touch target/dependency-check-report.html
+
   artifacts:
-    paths:
-      - target/dependency-check-report.html
+    paths: [target/dependency-check-report.html]
     expire_in: 1 week
     when: always
 
