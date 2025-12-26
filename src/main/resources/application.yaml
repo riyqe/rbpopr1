@@ -3,7 +3,7 @@ spring:
     name: course-management
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
       settings:
         web-allow-others: true
@@ -20,7 +20,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health
+  endpoint:
+    health:
+      show-details: never
 server:
   error:
     include-stacktrace: ALWAYS
