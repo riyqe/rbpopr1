@@ -44,7 +44,6 @@ dependency-check:
     key: "nvd-lib-cache"
     paths:
       - .dependency-check-data/
-      -
   script:
     - mkdir -p target
     - mvn dependency-check:check -DdataDirectory=.dependency-check-data -DfailBuildOnCVSS=11 || true
