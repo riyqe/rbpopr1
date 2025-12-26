@@ -1,0 +1,49 @@
+name: Fuzzing (RESTler)
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  fuzz:
+    name: RESTler quick fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build & package
+        run: mvn package
+
+      - name: Start app
+        run: |
+          java -jar target/*.jar &
+          sleep 30
+
+      - name: Download OpenAPI
+        run: curl -s http://localhost:8080/v3/api-docs > openapi.json
+
+      - name: RESTler compile & quick fuzz
+        run: |
+          docker run --rm --network host -v $PWD:/data --platform linux/amd64 \
+            mcr.microsoft.com/restlerfuzzer/restler:v8.5.0 \
+            sh -c "cd /data && \
+                   python3 /RESTler/engine/restler.py compile --api_spec openapi.json && \
+                   python3 /RESTler/engine/restler.py fuzz \
+                     --grammar Compile/grammar.py \
+                     --dictionary Compile/dict.json \
+                     --settings Compile/engine_settings.json \
+                     --no_ssl \
+                     --time_budget 1 \
+                     --target http://localhost:8080"
+
+      - name: Upload fuzz results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-results
+          path: Fuzz/RestlerResults/

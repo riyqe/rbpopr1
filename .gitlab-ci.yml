@@ -5,6 +5,7 @@ workflow:
 
 stages:
   - build
+  - fuzz
   - test
 
 build-job:
@@ -18,6 +19,35 @@ build-job:
     paths:
       - target/*.jar
     expire_in: 1 day
+
+fuzz-restler:
+  stage: fuzz
+  tags: [macos]
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  dependencies: [build-job]
+  allow_failure: true
+  script:
+    - java -jar target/*.jar &
+    - sleep 30
+    - curl -s http://localhost:8080/v3/api-docs > openapi.json
+    - |
+      docker run --rm --network host -v $PWD:/data --platform linux/amd64 \
+       mcr.microsoft.com/restlerfuzzer/restler:v8.5.0 \
+       sh -c "cd /data && \
+              python3 /RESTler/engine/restler.py compile --api_spec openapi.json && \
+              python3 /RESTler/engine/restler.py fuzz \
+                --grammar Compile/grammar.py \
+                --dictionary Compile/dict.json \
+                --settings Compile/engine_settings.json \
+                --no_ssl \
+                --time_budget 1 \
+                --target http://localhost:8080"
+  artifacts:
+    paths: [Fuzz/RestlerResults/]
+    expire_in: 1 week
+    when: always
 
 semgrep-sast:
   stage: test
