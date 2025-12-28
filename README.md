@@ -1,6 +1,6 @@
-1.	OWASP-2021-A01 Broken Access Control
+OWASP-2021-A01 Broken Access Control
 REST-endpoint’ы /api/** были доступны без авторизации, что позволяло любому пользователю выполнять CRUD-операции над курсами, студентами и т.д.
-1.1.	 Создан файл SecurityConfig.java
+ Создан файл SecurityConfig.java
 package ru.mtuci.coursemanagement.config;
 
 import org.springframework.context.annotation.Bean;
@@ -49,13 +49,13 @@ public class SecurityConfig {
         return http.build();
     }
 }
-1.2.	Добавление зависимости в pom.xml
+Добавление зависимости в pom.xml
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency> 
 
-2.	OWASP-2021-A02 Cryptographic Failures
+OWASP-2021-A02 Cryptographic Failures
 Библиотека dom4j 1.6.1 содержит уязвимость XXE (CVE-2020-10683). Изменена версия до 2.1.4, где по умолчанию отключён DOCTYPE и внешние сущности.
 2.1.
 <dependency>
@@ -72,7 +72,8 @@ u.setPassword(password);
 log.info("User {} logged in", username);
 ...
 u.setPassword(encoder.encode(password));
-3.	OWASP-2021-A03 Injection
+
+OWASP-2021-A03 Injection
 SAXReader разрешал DOCTYPE и внешние сущности -> XXE-инъекция.
 Отключили DOCTYPE и внешние сущности на уровне парсера.
 3.1.
@@ -84,12 +85,13 @@ SAXReader разрешал DOCTYPE и внешние сущности -> XXE-и�
         Document doc = reader.read(new StringReader(xml));
         return doc.getRootElement().getText();
     }
-4.	OWASP-2021-A05 Security Misconfiguration
-•	H2-консоль открыта для всех (web-allow-others: true)
-•	Actuator показывал внутренности (/actuator/health)
-•	не хватало security-заголовков (CSP, X-Frame-Options и т.д.)
+    
+OWASP-2021-A05 Security Misconfiguration
+H2-консоль открыта для всех (web-allow-others: true)
+Actuator показывал внутренности (/actuator/health)
+не хватало security-заголовков (CSP, X-Frame-Options и т.д.)
 
-4.1.	
+
 package ru.mtuci.coursemanagement.config;
 
 import org.springframework.context.annotation.Bean;
@@ -137,7 +139,7 @@ public class SecurityConfig {
         return http.build();
     }
 }
-4.2.	
+
     name: course-management
   h2:
     console:
@@ -145,7 +147,7 @@ public class SecurityConfig {
       path: /h2-console
       settings:
         web-allow-others: true
-4.3.	
+
 package ru.mtuci.coursemanagement.service;
 
 import lombok.RequiredArgsConstructor;
@@ -173,7 +175,8 @@ public class UserService {
         return repo.save(u);
     }
 }
-5.	OWASP-2021-A06 Vulnerable and Outdated Components
+
+OWASP-2021-A06 Vulnerable and Outdated Components
 tomcat-embed-core 10.1.43 содержит 4 CVE (например, CVE-2025-55754).
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -181,7 +184,8 @@ tomcat-embed-core 10.1.43 содержит 4 CVE (например, CVE-2025-557
         <version>3.5.4</version> <version>3.5.7</version>
         <relativePath/>
     </parent>
-6.	OWASP-2021-A09 Security Logging and Monitoring Failures
+    
+OWASP-2021-A09 Security Logging and Monitoring Failures
 Убрали логирование открытого текста.
 log.info("User {} logged in with password {}", username, password);
 ...
@@ -190,5 +194,3 @@ u.setPassword(password);
 log.info("User {} logged in", username);
 ...
 u.setPassword(encoder.encode(password));
-
-<img width="468" height="728" alt="image" src="https://github.com/user-attachments/assets/0e38c260-70e1-40ed-8b88-e66fc130de9c" />
